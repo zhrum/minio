@@ -1,0 +1,93 @@
+apiVersion: v1
+kind: Template
+objects:
+- apiVersion: v1
+  kind: PersistentVolumeClaim
+  metadata:
+    name: miniostorage
+  spec:
+    accessModes:
+    - ReadWriteOnce
+    resources:
+      requests:
+        storage: 1Gi
+- apiVersion: v1
+  kind: Service
+  metadata:
+    labels:
+      app: minio
+    name: minio
+  spec:
+    ports:
+    - name: 9000-tcp
+      port: 9000
+      protocol: TCP
+      targetPort: 9000
+    selector:
+      app: minio
+      deploymentconfig: minio
+    type: ClusterIP
+- apiVersion: v1
+  kind: Route
+  metadata:
+    name: minio
+  spec:
+    port:
+      targetPort: 9000-tcp
+    to:
+      kind: Service
+      name: minio
+- apiVersion: v1
+  kind: DeploymentConfig
+  metadata:
+    labels:
+      app: minio
+    name: minio
+  spec:
+    selector:
+      app: minio
+      deploymentconfig: minio
+    strategy:
+      type: Rolling
+    template:
+      metadata:
+        labels:
+          app: minio
+          deploymentconfig: minio
+      spec:
+        containers:
+        - image: zhrum/minio
+          imagePullPolicy: Always
+          name: minio
+          ports:
+          - containerPort: 9000
+            protocol: TCP
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          volumeMounts:
+          - mountPath: /export
+            name: volminio
+        volumes:
+        - name: volminio
+          persistentVolumeClaim:
+            claimName: miniostorage
+- apiVersion: v1
+  kind: ImageStream
+  metadata:
+    labels:
+      app: minio
+    name: minio
+  spec:
+    lookupPolicy:
+      local: false
+    tags:
+    - annotations:
+        openshift.io/imported-from: zhrum/minio
+      from:
+        kind: DockerImage
+        name: zhrum/minio 
+      name: latest
+      referencePolicy:
+        type: Source
+  status:
+    dockerImageRepository: ""
