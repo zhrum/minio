@@ -1,5 +1,7 @@
 apiVersion: v1
 kind: Template
+metadata:
+  name: miniotemplate
 objects:
 - apiVersion: v1
   kind: PersistentVolumeClaim
@@ -10,7 +12,7 @@ objects:
     - ReadWriteOnce
     resources:
       requests:
-        storage: 1Gi
+        storage: ${VOL_SIZE}
 - apiVersion: v1
   kind: Service
   metadata:
@@ -44,6 +46,7 @@ objects:
       app: minio
     name: minio
   spec:
+    replicas: 1
     selector:
       app: minio
       deploymentconfig: minio
@@ -91,3 +94,7 @@ objects:
         type: Source
   status:
     dockerImageRepository: ""
+parameters:
+- name: VOL_SIZE
+  value: 1Gi
+  required: true
